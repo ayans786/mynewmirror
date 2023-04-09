@@ -666,9 +666,6 @@ async def edit_variable(client, message, pre_message, key):
         await start_from_queued()
     elif key in ['RCLONE_SERVE_URL', 'RCLONE_SERVE_PORT', 'RCLONE_SERVE_USER', 'RCLONE_SERVE_PASS']:
         await rclone_serve_booter()
-    elif key == 'SET_COMMANDS':
-        await set_commands(client)
-
 
 async def edit_aria(client, message, pre_message, key):
     handler_dict[message.chat.id] = False
