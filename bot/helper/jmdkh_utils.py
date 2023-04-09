@@ -5,7 +5,7 @@ from re import search
 from bencoding import bdecode, bencode
 
 from bot import DATABASE_URL, LOGGER, config_dict
-from bot.helper.ext_utils.bot_utils import check_user_tasks, is_gdrive_link, is_magnet
+from bot.helper.ext_utils.bot_utils import is_gdrive_link, is_magnet
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from bot.helper.telegram_helper.message_utils import delete_links, forcesub, message_filter, request_limiter, sendMessage
@@ -48,9 +48,6 @@ async def none_admin_utils(link, message, tag, isLeech, file_=None):
     if notSub := await forcesub(message, tag):
         await delete_links(message)
         return notSub
-    if (maxtask := config_dict['USER_MAX_TASKS']) and await check_user_tasks(message.from_user.id, maxtask):
-        await delete_links(message)
-        return await sendMessage(message, f"Your tasks limit exceeded for {maxtask} tasks")
     if isLeech and config_dict['DISABLE_LEECH']:
         await delete_links(message)
         return await sendMessage(message, 'Locked!')
