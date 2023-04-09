@@ -456,19 +456,6 @@ class MirrorLeechListener:
                                 share_urls = f'{INDEX_URL}/{url_path}?a=view'
                                 share_urls = await sync_to_async(short_url, share_urls)
                                 buttons.ubutton("View Link", share_urls)
-                if self.dmMessage:
-                    msg += '\n\n<b>Links has been sent in your DM.</b>'
-                    await sendMessage(self.message, msg)
-                    await sendMessage(self.dmMessage, msg, buttons.build_menu(2))
-                else:
-                    if self.isSuperGroup and not self.message.chat.has_protected_content:
-                        buttons.ibutton("Save This Message", 'save', 'footer')
-                    await sendMessage(self.message, msg, buttons.build_menu(2))
-                if self.logMessage:
-                    if link and config_dict['DISABLE_DRIVE_LINK']:
-                        link = await sync_to_async(short_url, link)
-                        buttons.ubutton("Drive Link", link, 'header')
-                    await sendMessage(self.logMessage, msg, buttons.build_menu(2))
             else:
                 msg += f'\n\nPath: <code>{rclonePath}</code>'
                 await sendMessage(self.message, msg)
