@@ -20,7 +20,7 @@ from tenacity import (RetryError, retry, retry_if_exception_type,
                       stop_after_attempt, wait_exponential)
 
 from bot import GLOBAL_EXTENSION_FILTER, SHORTENERES, config_dict, list_drives
-from bot.helper.ext_utils.bot_utils import (async_to_sync, extra_btns,
+from bot.helper.ext_utils.bot_utils import (async_to_sync,
                                             get_readable_file_size,
                                             setInterval)
 from bot.helper.ext_utils.fs_utils import get_mime_type
@@ -650,7 +650,6 @@ class GoogleDriveHelper:
         msg = f"<b>Found {contents_count} result for <i>{fileName}</i></b>"
         buttons = ButtonMaker()
         buttons.ubutton("🔎 VIEW", f"https://telegra.ph/{path[0]}", 'header')
-        buttons = extra_btns(buttons)
         return msg, buttons.build_menu(2)
 
     def count(self, link):
