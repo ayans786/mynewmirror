@@ -16,7 +16,7 @@ from bot import (DATABASE_URL, DOWNLOAD_DIR, LOGGER, MAX_SPLIT_SIZE,
                  download_dict_lock, non_queued_dl, non_queued_up,
                  queue_dict_lock, queued_dl, queued_up, status_reply_dict_lock,
                  user_data)
-from bot.helper.ext_utils.bot_utils import (extra_btns, get_readable_file_size,
+from bot.helper.ext_utils.bot_utils import (get_readable_file_size,
                                             get_readable_time, sync_to_async)
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.exceptions import NotSupportedExtractionArchive
@@ -456,7 +456,6 @@ class MirrorLeechListener:
                                 share_urls = f'{INDEX_URL}/{url_path}?a=view'
                                 share_urls = await sync_to_async(short_url, share_urls)
                                 buttons.ubutton("View Link", share_urls)
-                buttons = extra_btns(buttons)
                 if self.dmMessage:
                     msg += '\n\n<b>Links has been sent in your DM.</b>'
                     await sendMessage(self.message, msg)
