@@ -15,7 +15,7 @@ from pyrogram.handlers import MessageHandler
 from bot import DATABASE_URL, INCOMPLETE_TASK_NOTIFIER, LOGGER, STOP_DUPLICATE_TASKS, Interval, QbInterval, bot, botStartTime, config_dict, scheduler
 
 from bot.helper.listeners.aria2_listener import start_aria2_listener
-from .helper.ext_utils.bot_utils import cmd_exec, get_readable_file_size, get_readable_time, set_commands, sync_to_async
+from .helper.ext_utils.bot_utils import cmd_exec, get_readable_file_size, get_readable_time, sync_to_async
 from .helper.ext_utils.db_handler import DbManger
 from .helper.ext_utils.fs_utils import clean_all, exit_clean_up, start_cleanup
 from .helper.telegram_helper.bot_commands import BotCommands
@@ -200,7 +200,7 @@ async def restart_notification():
 
 
 async def main():
-    await gather(start_cleanup(), torrent_search.initiate_search_tools(), restart_notification(), set_commands(bot))
+    await gather(start_cleanup(), torrent_search.initiate_search_tools(), restart_notification())
 
     bot.add_handler(MessageHandler(
         start, filters=command(BotCommands.StartCommand)))
