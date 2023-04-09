@@ -20,7 +20,7 @@ from bot import (DATABASE_URL, GLOBAL_EXTENSION_FILTER, IS_PREMIUM_USER,
                  config_dict, download_dict, extra_buttons, get_client,
                  list_drives, qbit_options, status_reply_dict_lock, user_data)
 from bot.helper.ext_utils.bot_utils import (get_readable_file_size, new_thread,
-                                            set_commands, setInterval,
+                                            setInterval,
                                             sync_to_async)
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.task_manager import start_from_queued
@@ -339,9 +339,6 @@ async def load_config():
     DISABLE_LEECH = environ.get('DISABLE_LEECH', '')
     DISABLE_LEECH = DISABLE_LEECH.lower() == 'true'
 
-    SET_COMMANDS = environ.get('SET_COMMANDS', '')
-    SET_COMMANDS = SET_COMMANDS.lower() == 'true'
-
     REQUEST_LIMITS = environ.get('REQUEST_LIMITS', '')
     REQUEST_LIMITS = '' if len(
         REQUEST_LIMITS) == 0 else max(int(REQUEST_LIMITS), 5)
@@ -395,17 +392,6 @@ async def load_config():
                 else:
                     tempdict['index_link'] = ''
                 categories[name] = tempdict
-
-    extra_buttons.clear()
-    if await aiopath.exists('buttons.txt'):
-        async with aiopen('buttons.txt', 'r+') as f:
-            lines = await f.readlines()
-            for line in lines:
-                temp = line.strip().split()
-                if len(extra_buttons.keys()) == 4:
-                    break
-                if len(temp) == 2:
-                    extra_buttons[temp[0].replace("_", " ")] = temp[1]
 
     SHORTENERES.clear()
     SHORTENER_APIS.clear()
@@ -494,7 +480,6 @@ async def load_config():
         "ENABLE_MESSAGE_FILTER": ENABLE_MESSAGE_FILTER,
         "STOP_DUPLICATE_TASKS": STOP_DUPLICATE_TASKS,
         "DISABLE_DRIVE_LINK": DISABLE_DRIVE_LINK,
-        "SET_COMMANDS": SET_COMMANDS,
         "DISABLE_LEECH": DISABLE_LEECH,
         "REQUEST_LIMITS": REQUEST_LIMITS,
         "DM_MODE": DM_MODE,
