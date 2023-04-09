@@ -164,9 +164,7 @@ def get_readable_message():
         buttons.ibutton(">>", "status nex")
         buttons.ibutton("♻️", "status ref")
         button = buttons.build_menu(3)
-    msg += f"<b>CPU:</b> {cpu_percent()}% | <b>FREE:</b> {get_readable_file_size(disk_usage(config_dict['DOWNLOAD_DIR']).free)}"
-    msg += f"\n<b>RAM:</b> {virtual_memory().percent}% | <b>UPTIME:</b> {get_readable_time(time() - botStartTime)}"
-    msg += f"\n<b>DL:</b> {get_readable_file_size(dl_speed)}/s | <b>UL:</b> {get_readable_file_size(up_speed)}/s"
+    msg += f"<b>UPTIME:</b> {get_readable_time(time() - botStartTime)} | <b>FREE:</b> {get_readable_file_size(disk_usage(config_dict['DOWNLOAD_DIR']).free)}"
     return msg, button
 
 
