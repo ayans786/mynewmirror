@@ -120,7 +120,7 @@ async def set_yt_quality(client, message, pre_event):
         await DbManger().update_user_data(user_id)
 
 
-async def set_perfix(client, message, pre_event):
+async def set_prefix(client, message, pre_event):
     user_id = message.from_user.id
     handler_dict[user_id] = False
     value = message.text
@@ -281,18 +281,18 @@ Check all available qualities options <a href="https://github.com/yt-dlp/yt-dlp#
         rmsg = f'''
 Send Leech Prefix. Timeout: 60 sec
 Examples:
-1. <code>{escape('<b>@JMDKH_Team</b>')}</code> 
+1. <code>{escape('<b>AZ</b>')}</code> 
 This will give output of:
-<b>@JMDKH_Team</b>  <code>50MB.bin</code>.
+<b>AZ</b>  <code>50MB.bin</code>.
 
-2. <code>{escape('<code>@JMDKH_Team</code>')}</code> 
+2. <code>{escape('<code>AZ</code>')}</code> 
 This will give output of:
-<code>@JMDKH_Team</code> <code>50MB.bin</code>.
+<code>AZ</code> <code>50MB.bin</code>.
 
 Check all available formatting options <a href="https://core.telegram.org/bots/api#formatting-options">HERE</a>.
         '''
         await editMessage(message, rmsg, buttons.build_menu(1))
-        pfunc = partial(set_perfix, pre_event=query)
+        pfunc = partial(set_prefix, pre_event=query)
         await event_handler(client, query, pfunc)
     elif data[2] == 'rlpre':
         handler_dict[user_id] = False
