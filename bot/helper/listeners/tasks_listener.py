@@ -16,7 +16,7 @@ from bot import (DATABASE_URL, DOWNLOAD_DIR, LOGGER, MAX_SPLIT_SIZE,
                  download_dict_lock, non_queued_dl, non_queued_up,
                  queue_dict_lock, queued_dl, queued_up, status_reply_dict_lock,
                  user_data)
-from bot.helper.ext_utils.bot_utils import (get_readable_file_size,
+from bot.helper.ext_utils.bot_utils import (extra_btns, get_readable_file_size,
                                             get_readable_time, sync_to_async)
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.exceptions import NotSupportedExtractionArchive
@@ -68,7 +68,7 @@ class MirrorLeechListener:
         self.suproc = None
         self.sameDir = sameDir
         self.rcFlags = rcFlags
-        self.upPath = upPath or config_dict['DEFAULT_UPLOAD']
+        self.upPath = upPath
         self.isClone = isClone
         self.raw_url = raw_url
         self.drive_id = drive_id
@@ -356,24 +356,25 @@ class MirrorLeechListener:
             RCTransfer = RcloneTransferHelper(self, up_name)
             async with download_dict_lock:
                 download_dict[self.uid] = RcloneStatus(
-                    RCTransfer, self.message, size, gid, 'up', self.extra_details)
+                    RCTransfer, self.message, gid, 'up', self.extra_details)
             await update_all_messages()
             await RCTransfer.upload(path, size)
 
-    async def onUploadComplete(self, link, size, files, folders, typ, name, rclonePath='', drive_id=None):
+    async def onUploadComplete(self, link, size, files, folders, mime_type, name, rclonePath='', drive_id=None):
         if DATABASE_URL and config_dict['STOP_DUPLICATE_TASKS'] and self.raw_url:
             await DbManger().remove_download(self.raw_url)
         if self.isSuperGroup and config_dict['INCOMPLETE_TASK_NOTIFIER'] and DATABASE_URL:
             await DbManger().rm_complete_task(self.message.link)
         LOGGER.info(f'Done Uploading {name}')
+        usr_name = self.message.from_user.first_name.replace('>', '').replace('<', '')
         if self.isLeech:
             msg = f'<b><i>{escape(name)}</i></b>\n'
             msg += f'\n<b>• Size</b>: {get_readable_file_size(size)}'
             msg += f'\n<b>• Total Files</b>: {folders}'
             msg += f"\n<b>• Elapsed</b>: {get_readable_time(time() - self.extra_details['startTime'])}"
-            if typ != 0:
-                msg += f'\n<b>• Corrupted Files</b>: {typ}'
-            msg += f'\n<b>• Leeched by</b>: {self.tag}\n\n'
+            if mime_type != 0:
+                msg += f'\n<b>• Corrupted Files</b>: {mime_type}'
+            msg += f'\n<b>• Leeched by</b>: {usr_name}\n\n'
             if not files:
                 await sendMessage(self.message, msg)
                 if self.logMessage:
@@ -386,26 +387,21 @@ class MirrorLeechListener:
                     await sendMessage(self.logMessage, msg)
             else:
                 fmsg = ''
+                buttons = ButtonMaker()
+                buttons = extra_btns(buttons)
+                if self.isSuperGroup and not self.message.chat.has_protected_content:
+                    buttons.ibutton('Save This Message', 'save', 'footer')
                 for index, (link, name) in enumerate(files.items(), start=1):
                     fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
                     if len(fmsg.encode() + msg.encode()) > 4000:
                         if self.logMessage:
                             await sendMessage(self.logMessage, msg + fmsg)
-                        buttons = ButtonMaker()
-                        buttons = extra_btns(buttons)
-                        if self.isSuperGroup and not self.message.chat.has_protected_content:
-                            buttons.ibutton(
-                                'Save This Message', 'save', 'footer')
                         await sendMessage(self.message, msg + fmsg, buttons.build_menu(2))
                         await sleep(1)
                         fmsg = ''
                 if fmsg != '':
                     if self.logMessage:
                         await sendMessage(self.logMessage, msg + fmsg)
-                    buttons = ButtonMaker()
-                    buttons = extra_btns(buttons)
-                    if self.isSuperGroup and not self.message.chat.has_protected_content:
-                        buttons.ibutton('Save This Message', 'save', 'footer')
                     await sendMessage(self.message, msg + fmsg, buttons.build_menu(2))
             if self.seed:
                 if self.newDir:
@@ -418,11 +414,11 @@ class MirrorLeechListener:
         else:
             msg = f'<b><i>{escape(name)}</i></b>\n'
             msg += f'\n<b>• Size</b>: {get_readable_file_size(size)}'
-            msg += f'\n<b>• Type</b>: {typ}'
-            if typ == "Folder":
+            msg += f'\n<b>• Type</b>: {mime_type}'
+            if mime_type == "Folder":
                 msg += f'\n<b>• SubFolders</b>: {folders}'
                 msg += f'\n<b>• Files</b>: {files}'
-            msg += f'\n<b>• Uploaded by</b>: {self.tag}'
+            msg += f'\n<b>• Uploaded by</b>: {usr_name}'
             msg += f'\n<b>• Elapsed</b>: {get_readable_time(time() - self.extra_details["startTime"])}'
             if link or rclonePath and config_dict['RCLONE_SERVE_URL']:
                 if drive_id and config_dict['GDRIVE_ID'] != drive_id:
@@ -438,7 +434,7 @@ class MirrorLeechListener:
                     remote, path = rclonePath.split(':', 1)
                     url_path = url_quote(f'{path}')
                     share_url = f'{RCLONE_SERVE_URL}/{remote}/{url_path}'
-                    if typ == "Folder":
+                    if mime_type == "Folder":
                         share_url += '/'
                     share_url = await sync_to_async(short_url, share_url)
                     buttons.ubutton("Rclone Link", share_url)
@@ -447,7 +443,7 @@ class MirrorLeechListener:
                     if INDEX_URL:
                         url_path = url_quote(f'{name}')
                         share_url = f'{INDEX_URL}/{url_path}'
-                        if typ == "Folder":
+                        if mime_type == "Folder":
                             share_url += '/'
                             share_url = await sync_to_async(short_url, share_url)
                             buttons.ubutton("Index Link", share_url)
@@ -458,6 +454,20 @@ class MirrorLeechListener:
                                 share_urls = f'{INDEX_URL}/{url_path}?a=view'
                                 share_urls = await sync_to_async(short_url, share_urls)
                                 buttons.ubutton("View Link", share_urls)
+                buttons = extra_btns(buttons)
+                if self.dmMessage:
+                    msg += '\n\n<b>Links has been sent in your DM.</b>'
+                    await sendMessage(self.message, msg)
+                    await sendMessage(self.dmMessage, msg, buttons.build_menu(2))
+                else:
+                    if self.isSuperGroup and not self.message.chat.has_protected_content:
+                        buttons.ibutton("Save This Message", 'save', 'footer')
+                    await sendMessage(self.message, msg, buttons.build_menu(2))
+                if self.logMessage:
+                    if link and config_dict['DISABLE_DRIVE_LINK']:
+                        link = await sync_to_async(short_url, link)
+                        buttons.ubutton("Drive Link", link, 'header')
+                    await sendMessage(self.logMessage, msg, buttons.build_menu(2))
             else:
                 msg += f'\n\nPath: <code>{rclonePath}</code>'
                 await sendMessage(self.message, msg)
@@ -498,7 +508,7 @@ class MirrorLeechListener:
             count = len(download_dict)
             if self.uid in self.sameDir:
                 self.sameDir.remove(self.uid)
-        msg = f'{self.tag} your download has been stopped due to: {escape(error)}'
+        msg = f'{self.tag} Download: {escape(error)}'
         msg += f"\n\n<b>• Elapsed</b>: {get_readable_time(time() - self.extra_details['startTime'])}"
         await sendMessage(self.message, msg, button)
         if self.logMessage:

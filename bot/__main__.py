@@ -15,13 +15,13 @@ from pyrogram.handlers import MessageHandler
 from bot import DATABASE_URL, INCOMPLETE_TASK_NOTIFIER, LOGGER, STOP_DUPLICATE_TASKS, Interval, QbInterval, bot, botStartTime, config_dict, scheduler
 
 from bot.helper.listeners.aria2_listener import start_aria2_listener
-from .helper.ext_utils.bot_utils import cmd_exec, get_readable_file_size, get_readable_time, sync_to_async
+from .helper.ext_utils.bot_utils import cmd_exec, get_readable_file_size, get_readable_time, set_commands, sync_to_async
 from .helper.ext_utils.db_handler import DbManger
 from .helper.ext_utils.fs_utils import clean_all, exit_clean_up, start_cleanup
 from .helper.telegram_helper.bot_commands import BotCommands
 from .helper.telegram_helper.filters import CustomFilters
 from .helper.telegram_helper.message_utils import editMessage, sendFile, sendMessage
-from .modules import anonymous, authorize, bot_settings, cancel_mirror, category_select, eval, gd_count, gd_delete, gd_list, leech_del, mirror_leech, rmdb, rss, save_message, shell, status, torrent_search, torrent_select, users_settings, ytdlp
+from .modules import anonymous, authorize, bot_settings, cancel_mirror, category_select, clone, eval, gd_count, gd_delete, gd_list, leech_del, mirror_leech, rmdb, rss, save_message, shell, status, torrent_search, torrent_select, users_settings, ytdlp
 
 start_aria2_listener()
 
@@ -66,10 +66,10 @@ async def stats(client, message):
 
 async def start(client, message):
     if config_dict['DM_MODE']:
-        start_string = 'Bot Started.\n' \
+        start_string = f'<b>Welcome, To Era of Luna!</b>\n\n' \
                     'Now I will send your files or links here.\n'
     else:
-        start_string = 'Welcome To One Of A Modified Anasty Mirror Bot\n' \
+        start_string = f'<b>Welcome, To Era of Luna!</b>\n\n' \
                     'This bot can Mirror all your links To Google Drive!\n'
               
     await sendMessage(message, start_string)
@@ -198,7 +198,7 @@ async def restart_notification():
 
 
 async def main():
-    await gather(start_cleanup(), torrent_search.initiate_search_tools(), restart_notification())
+    await gather(start_cleanup(), torrent_search.initiate_search_tools(), restart_notification(), set_commands(bot))
 
     bot.add_handler(MessageHandler(
         start, filters=command(BotCommands.StartCommand)))

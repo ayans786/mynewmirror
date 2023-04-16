@@ -20,7 +20,7 @@ from bot import (DATABASE_URL, GLOBAL_EXTENSION_FILTER, IS_PREMIUM_USER,
                  config_dict, download_dict, extra_buttons, get_client,
                  list_drives, qbit_options, status_reply_dict_lock, user_data)
 from bot.helper.ext_utils.bot_utils import (get_readable_file_size, new_thread,
-                                            setInterval,
+                                            set_commands, setInterval,
                                             sync_to_async)
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.task_manager import start_from_queued
@@ -120,11 +120,7 @@ async def load_config():
                 x = x.lstrip('.')
             GLOBAL_EXTENSION_FILTER.append(x.strip().lower())
 
-    MEGA_API_KEY = environ.get('MEGA_API_KEY', '')
-    if len(MEGA_API_KEY) == 0:
-        MEGA_API_KEY = ''
-
-    MEGA_EMAIL_ID = environ.get('MEGA_EMAIL_ID', '')
+    MEGA_EMAIL = environ.get('MEGA_EMAIL', '')
     MEGA_PASSWORD = environ.get('MEGA_PASSWORD', '')
     if len(MEGA_EMAIL_ID) == 0 or len(MEGA_PASSWORD) == 0:
         MEGA_EMAIL_ID = ''
@@ -339,6 +335,9 @@ async def load_config():
     DISABLE_LEECH = environ.get('DISABLE_LEECH', '')
     DISABLE_LEECH = DISABLE_LEECH.lower() == 'true'
 
+    SET_COMMANDS = environ.get('SET_COMMANDS', '')
+    SET_COMMANDS = SET_COMMANDS.lower() == 'true'
+
     REQUEST_LIMITS = environ.get('REQUEST_LIMITS', '')
     REQUEST_LIMITS = '' if len(
         REQUEST_LIMITS) == 0 else max(int(REQUEST_LIMITS), 5)
@@ -393,6 +392,17 @@ async def load_config():
                     tempdict['index_link'] = ''
                 categories[name] = tempdict
 
+    extra_buttons.clear()
+    if await aiopath.exists('buttons.txt'):
+        async with aiopen('buttons.txt', 'r+') as f:
+            lines = await f.readlines()
+            for line in lines:
+                temp = line.strip().split()
+                if len(extra_buttons.keys()) == 4:
+                    break
+                if len(temp) == 2:
+                    extra_buttons[temp[0].replace("_", " ")] = temp[1]
+
     SHORTENERES.clear()
     SHORTENER_APIS.clear()
     if await aiopath.exists('shorteners.txt'):
@@ -434,8 +444,7 @@ async def load_config():
         "LEECH_FILENAME_PREFIX": LEECH_FILENAME_PREFIX,
         "LEECH_SPLIT_SIZE": LEECH_SPLIT_SIZE,
         "MEDIA_GROUP": MEDIA_GROUP,
-        "MEGA_API_KEY": MEGA_API_KEY,
-        "MEGA_EMAIL_ID": MEGA_EMAIL_ID,
+        "MEGA_EMAIL": MEGA_EMAIL,
         "MEGA_PASSWORD": MEGA_PASSWORD,
         "OWNER_ID": OWNER_ID,
         "QUEUE_ALL": QUEUE_ALL,
@@ -480,6 +489,7 @@ async def load_config():
         "ENABLE_MESSAGE_FILTER": ENABLE_MESSAGE_FILTER,
         "STOP_DUPLICATE_TASKS": STOP_DUPLICATE_TASKS,
         "DISABLE_DRIVE_LINK": DISABLE_DRIVE_LINK,
+        "SET_COMMANDS": SET_COMMANDS,
         "DISABLE_LEECH": DISABLE_LEECH,
         "REQUEST_LIMITS": REQUEST_LIMITS,
         "DM_MODE": DM_MODE,
@@ -666,6 +676,9 @@ async def edit_variable(client, message, pre_message, key):
         await start_from_queued()
     elif key in ['RCLONE_SERVE_URL', 'RCLONE_SERVE_PORT', 'RCLONE_SERVE_USER', 'RCLONE_SERVE_PASS']:
         await rclone_serve_booter()
+    elif key == 'SET_COMMANDS':
+        await set_commands(client)
+
 
 async def edit_aria(client, message, pre_message, key):
     handler_dict[message.chat.id] = False
