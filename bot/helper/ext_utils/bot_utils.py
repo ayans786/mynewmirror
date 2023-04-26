@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-from asyncio import (create_subprocess_exec, create_subprocess_shell,
-                     run_coroutine_threadsafe, sleep)
+from asyncio import create_subprocess_exec, create_subprocess_shell, run_coroutine_threadsafe, sleep
 from asyncio.subprocess import PIPE
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
@@ -8,13 +7,11 @@ from html import escape
 from re import match as re_match
 from time import time
 from urllib.request import urlopen
-
 from psutil import cpu_percent, disk_usage, virtual_memory
 from pyrogram.types import BotCommand
 from requests import head as rhead
 
-from bot import (bot_loop, botStartTime, config_dict, download_dict,
-                 download_dict_lock, extra_buttons, user_data)
+from bot import bot_loop, botStartTime, config_dict, download_dict, download_dict_lock, extra_buttons, user_data
 from bot.helper.ext_utils.telegraph_helper import telegraph
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
@@ -33,7 +30,7 @@ class MirrorStatus:
     STATUS_CLONING = "Cloning"
     STATUS_QUEUEDL = "DL waiting"
     STATUS_QUEUEUP = "UL waiting"
-    STATUS_PAUSED = "Pause"
+    STATUS_PAUSED = "Paused"
     STATUS_ARCHIVING = "Archiving"
     STATUS_EXTRACTING = "Extracting"
     STATUS_SPLITTING = "Splitting"
@@ -80,7 +77,7 @@ async def getAllDownload(req_status, user_id=None):
     return dls
 
 def bt_selection_buttons(id_, isCanCncl=True):
-    gid = id_[:12] if len(id_) > 20 else id_
+    gid = id_[:8]
     pincode = ''.join([n for n in id_ if n.isdigit()][:4])
     buttons = ButtonMaker()
     BASE_URL = config_dict['BASE_URL']
@@ -132,6 +129,7 @@ def get_readable_message():
             msg += f"\n<b>├ <a href='https://github.com/5hojib/Luna'>{get_progress_bar_string(download.progress())}</a></b> {download.progress()}"
             msg += f"\n<b>├ </b>{download.processed_bytes()} of {download.size()}"
             msg += f"\n<b>├ Speed</b>: {download.speed()}"
+            msg += f'\n<b>├ Estimated</b>: {download.eta()}'
             if hasattr(download, 'seeders_num'):
                 try:
                     msg += f"\n<b>├ Seeders</b>: {download.seeders_num()} | <b>Leechers</b>: {download.leechers_num()}"
@@ -145,8 +143,8 @@ def get_readable_message():
             msg += f"\n<b>├ Time</b>: {download.seeding_time()}"
         else:
             msg += f"\n<b>├ Size</b>: {download.size()}"
-        msg += f"\n<b>├ Source</b>: {download.extra_details['source']}"
         msg += f"\n<b>├ Elapsed</b>: {get_readable_time(time() - download.extra_details['startTime'])}"
+        msg += f"\n<b>├ Source</b>: {download.extra_details['source']}"
         msg += f"\n<b>└ </b><code>/{BotCommands.CancelMirror} {download.gid()}</code>\n\n"
     if len(msg) == 0:
         return None, None
@@ -177,7 +175,7 @@ def get_readable_message():
         buttons.ibutton(f"{PAGE_NO}/{PAGES}", "status ref")
         buttons.ibutton("Next", "status nex")
         button = buttons.build_menu(3)
-    msg += f"<b>• Tasks</b>: {tasks}"
+    msg += f"<b>• Tasks running</b>: {tasks}"
     msg += f"\n<b>• Free disk space</b>: {get_readable_file_size(disk_usage(config_dict['DOWNLOAD_DIR']).free)}"
     msg += f"\n<b>• Uploading speed</b>: {get_readable_file_size(up_speed)}/s"
     msg += f"\n<b>• Downloading speed</b>: {get_readable_file_size(dl_speed)}/s"
@@ -213,13 +211,17 @@ async def check_user_tasks(user_id, maxtask):
         return len(tasks) >= maxtask
 
 def get_readable_time(seconds):
-    periods = [(' Days ', 86400), (' Hours ', 3600), (' Min ', 60), (' Sec', 1)]
+    periods = [('year', 31536000), ('month', 2592000), ('week', 604800), ('day', 86400), ('hour', 3600), ('minute', 60), ('second', 1)]
     result = ''
     for period_name, period_seconds in periods:
         if seconds >= period_seconds:
             period_value, seconds = divmod(seconds, period_seconds)
-            result += f'{int(period_value)}{period_name}'
-    return result
+            plural_suffix = 's' if period_value > 1 else ''
+            result += f'{int(period_value)} {period_name}{plural_suffix} '
+            if len(result.split()) == 2:
+                break
+    return result.strip()
+
 
 def is_magnet(url):
     magnet = re_match(MAGNET_REGEX, url)
