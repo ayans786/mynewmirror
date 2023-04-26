@@ -1,13 +1,11 @@
 services:
   # A Docker web service
   - type: web
-    name: LunaPortal
+    name: Luna
     env: docker
     region: Singapore
     plan: free
     envVars:
-      - key: PORT
-        value: 80
       - key: BOT_TOKEN
         # value: BOT_TOKEN
         sync: false
@@ -23,6 +21,5 @@ services:
       - key: TELEGRAM_HASH
         # value: TELEGRAM_HASH
         sync: false
-      - key: BASE_URL
-        # value: BASE_URL
-        sync: false
+      - key: PORT
+        value: 80
