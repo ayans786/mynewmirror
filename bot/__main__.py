@@ -4,6 +4,7 @@ from os import execl as osexecl
 from signal import SIGINT, signal
 from sys import executable
 from time import time
+from uuid import uuid4
 
 from aiofiles import open as aiopen
 from aiofiles.os import path as aiopath
@@ -12,7 +13,7 @@ from psutil import boot_time, cpu_count, cpu_percent, disk_usage, net_io_counter
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 
-from bot import DATABASE_URL, INCOMPLETE_TASK_NOTIFIER, LOGGER, STOP_DUPLICATE_TASKS, Interval, QbInterval, bot, botStartTime, config_dict, scheduler
+from bot import DATABASE_URL, INCOMPLETE_TASK_NOTIFIER, LOGGER, STOP_DUPLICATE_TASKS, Interval, QbInterval, bot, user_data, botStartTime, config_dict, scheduler, alive
 
 from bot.helper.listeners.aria2_listener import start_aria2_listener
 from .helper.ext_utils.bot_utils import cmd_exec, get_readable_file_size, get_readable_time, set_commands, sync_to_async
@@ -27,48 +28,78 @@ start_aria2_listener()
 
 async def stats(client, message):
     total, used, free, disk = disk_usage('/')
-    swap = swap_memory()
     memory = virtual_memory()
-    net_io = net_io_counters()
     currentTime = get_readable_time(time() - botStartTime)
     mem_p = memory.percent
     osUptime = get_readable_time(time() - boot_time())
     cpuUsage = cpu_percent(interval=0.5)
     if await aiopath.exists('.git'):
-        last_commit = await cmd_exec("git log -1 --date=short --pretty=format:'%cd <b>From</b> %cr'", True)
-        last_commit = last_commit[0]
-        commit_from = await cmd_exec("git log -1 --date=short --pretty=format:'%cr'", True)
-        commit_from = commit_from[0]
-        commit_date = await cmd_exec("git log -1 --date=format:'%d %B %Y' --pretty=format:'%ad'", True)
-        commit_date = commit_date[0]
-        commit_time = await cmd_exec("git log -1 --date=format:'%I:%M:%S %p' --pretty=format:'%ad'", True)
-        commit_time = commit_time[0]
-    else:
-        last_commit = 'No UPSTREAM_REPO'
+        commit_id = (await cmd_exec("git log -1 --pretty=format:'%h'", True))[0]
+        commit_from = (await cmd_exec("git log -1 --date=short --pretty=format:'%cr'", True))[0]
+        commit_date = (await cmd_exec("git log -1 --date=format:'%d %B %Y' --pretty=format:'%ad'", True))[0]
+        commit_time = (await cmd_exec("git log -1 --date=format:'%I:%M:%S %p' --pretty=format:'%ad'", True))[0]
+        commit_name = (await cmd_exec("git log -1 --pretty=format:'%s%n%b'", True))[0]
     stats = f'<b><u>REPOSITORY INFO</u></b>\n\n' \
-            f'<b>• Updated:</b> {commit_date}\n'\
-            f'<b>• Commited On: </b>{commit_time}\n'\
-            f'<b>• From: </b>{commit_from}\n'\
-            f'\n'\
-            f'<b><u>BOT INFO</u></b>\n\n'\
-            f'<b>• Uptime:</b> {currentTime}\n'\
-            f'<b>• System:</b> {osUptime}\n'\
+            f'<b>• Last commit: </b>{commit_id}\n'\
+            f'<b>• Commit date:</b> {commit_date}\n'\
+            f'<b>• Commited on: </b>{commit_time}\n'\
+            f'<b>• From now: </b>{commit_from}\n'\
+            f'<b>• Changelog: </b>{commit_name}\n'\
             f'\n'\
             f'<b><u>SYSTEM INFO</u></b>\n\n'\
-            f'<b>• CPU Usage:</b> {cpuUsage}%\n'\
-            f'<b>• RAM Usage:</b> {mem_p}%\n'\
-            f'<b>• Disk Usage:</b> {disk}%\n'\
-            f'<b>• Free Disk Space:</b> {get_readable_file_size(free)}\n'\
-            f'<b>• Total Disk Space:</b> {get_readable_file_size(total)}\n'
+            f'<b>• Bot uptime:</b> {currentTime}\n'\
+            f'<b>• System uptime:</b> {osUptime}\n'\
+            f'<b>• CPU usage:</b> {cpuUsage}%\n'\
+            f'<b>• RAM usage:</b> {mem_p}%\n'\
+            f'<b>• Disk usage:</b> {disk}%\n'\
+            f'<b>• Free disk space:</b> {get_readable_file_size(free)}\n'\
+            f'<b>• Total disk space:</b> {get_readable_file_size(total)}\n'
     await sendMessage(message, stats)
 
 async def start(client, message):
-    if config_dict['DM_MODE']:
-        start_string = f'<b>Welcome, To Era of Luna!</b>\n\nNow I will send your files or links here.\n'
+    token_timeout = config_dict['TOKEN_TIMEOUT']
+    if len(message.command) > 1:
+        userid = message.from_user.id
+        input_token = message.command[1]
+        if userid not in user_data:
+            return await sendMessage(message, 'Who are you?')
+        data = user_data[userid]
+        if 'token' not in data or data['token'] != input_token:
+            return await sendMessage(message, 'This token is already expired')
+        data['token'] = str(uuid4())
+        data['time'] = time()
+        user_data[userid].update(data)
+        time_str = format_validity_time(token_timeout)
+        return await sendMessage(message, f'Congratulations! Token refreshed successfully!\n\n<b>It will expire after</b> {time_str}') 
+    elif config_dict['DM_MODE']:
+        start_string = f'<b>Welcome to the Era of Luna!</b>\n\nNow I will send your files or links here.\n'
     else:
-        start_string = f'<b>Welcome, To Era of Luna!</b>\n\nThis bot can Mirror all your links To Google Drive!\n'
+        start_string = f'<b>Welcome to the Era of Luna!</b>\n\nThis bot can Mirror all your links To Google Drive!\n'
               
     await sendMessage(message, start_string)
+
+def format_validity_time(validity_time):
+    days = validity_time // (24 * 3600)
+    validity_time = validity_time % (24 * 3600)
+    hours = validity_time // 3600
+    validity_time %= 3600
+    minutes = validity_time // 60
+    validity_time %= 60
+    seconds = validity_time
+    time_str = ''
+    if days > 0:
+        suffix = 's' if days > 1 else ''
+        time_str += f"{days} day{suffix} "
+    if hours > 0:
+        suffix = 's' if hours > 1 else ''
+        time_str += f"{hours} hour{suffix} "
+    if minutes > 0:
+        suffix = 's' if minutes > 1 else ''
+        time_str += f"{minutes} minute{suffix} "
+    suffix = 's' if seconds > 1 else ''
+    time_str += f"{seconds} second{suffix}"
+    return time_str
+
 
 async def restart(client, message):
     restart_message = await sendMessage(message, "Restarting...")
